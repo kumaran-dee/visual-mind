@@ -3,82 +3,83 @@
 
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>3D Character</title>
-
-    <link
-        rel="stylesheet"
-        href="./style.css"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Voice Character Animation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
 
     <script type="importmap">
     {
         "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
         }
     }
     </script>
+    <script src="./models/Idle.js"></script>
 </head>
 
 <body>
 
-    <!-- Animation buttons -->
-
-    <div id="controls">
-
-        <button id="idleButton">
-            IDLE
-        </button>
-
-        <button id="walkButton">
-            WALK
-        </button>
-
-        <button id="runButton">
-            SLOW RUN
-        </button>
-
-        <button id="waveButton">
-            WAVE 👋
-        </button>
-
-        <button id="talkButton">
-            TALK
-        </button>
-
-        <button id="jumpButton">
-            JUMP
-        </button>
-
-        <button id="leftButton">
-            ↶ LEFT TURN
-        </button>
-
-        <button id="rightButton">
-            RIGHT TURN ↷
-        </button>
-
+    <!-- Header Overlay -->
+    <div id="header-overlay">
+        <div class="title-badge">
+            <span class="live-dot"></span> Voice 3D Character
+        </div>
+        <div id="activeGesture" class="gesture-badge">
+            Current Gesture: <span id="currentGestureName">IDLE 🧍</span>
+        </div>
     </div>
 
+    <!-- Voice Control Panel -->
+    <div id="voice-container">
+        <div class="pulse-wrapper">
+            <div class="mic-pulse-ring ring-1"></div>
+            <div class="mic-pulse-ring ring-2"></div>
+            <button id="micButton" class="mic-btn" aria-label="Toggle Voice Control">
+                <svg class="mic-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="22"></line>
+                    <line x1="8" y1="22" x2="16" y2="22"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div id="speechStatus" class="speech-status">
+            Click Microphone to start voice commands
+        </div>
+        <div id="speechTranscript" class="speech-transcript">
+            Say: "Walk", "Run", "Wave", "Jump", "Talk", "Left", "Right", "Idle"
+        </div>
+    </div>
+
+    <!-- Floating Voice Commands Guide -->
+    <div id="command-guide">
+        <div class="guide-header">
+            <span>🎙️ Voice Triggers</span>
+        </div>
+        <div class="command-grid">
+            <div class="cmd-item" id="cmd-wave"><span class="cmd-name">"Wave" / "Hi"</span> <span class="cmd-emoji">👋</span></div>
+            <div class="cmd-item" id="cmd-jump"><span class="cmd-name">"Jump"</span> <span class="cmd-emoji">🦘</span></div>
+            <div class="cmd-item" id="cmd-walk"><span class="cmd-name">"Walk"</span> <span class="cmd-emoji">🚶</span></div>
+            <div class="cmd-item" id="cmd-run"><span class="cmd-name">"Run"</span> <span class="cmd-emoji">🏃</span></div>
+            <div class="cmd-item" id="cmd-talk"><span class="cmd-name">"Talk" / "Speak"</span> <span class="cmd-emoji">💬</span></div>
+            <div class="cmd-item" id="cmd-left"><span class="cmd-name">"Turn Left"</span> <span class="cmd-emoji">↶</span></div>
+            <div class="cmd-item" id="cmd-right"><span class="cmd-name">"Turn Right"</span> <span class="cmd-emoji">↷</span></div>
+            <div class="cmd-item" id="cmd-idle"><span class="cmd-name">"Stop" / "Idle"</span> <span class="cmd-emoji">🧍</span></div>
+        </div>
+    </div>
 
     <!-- Loading message -->
-
     <div id="loading">
-        Loading character...
+        <div class="spinner"></div>
+        <span>Loading character...</span>
     </div>
 
-
-    <script
-        type="module"
-        src="./script.js"
-    ></script>
-
+    <script type="module" src="./script.js"></script>
 </body>
 
 </html>

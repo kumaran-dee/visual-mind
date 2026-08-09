@@ -1,0 +1,6 @@
+@echo off
+echo Starting 3D Character Animation Server on port 8080...
+echo Opening http://localhost:8080 in Chrome...
+start chrome http://localhost:8080
+npx -y serve -p 8080
+
