@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>3D Character</title>
+
+    <link
+        rel="stylesheet"
+        href="./style.css"
+    >
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+
+<body>
+
+    <!-- Animation buttons -->
+
+    <div id="controls">
+
+        <button id="idleButton">
+            IDLE
+        </button>
+
+        <button id="walkButton">
+            WALK
+        </button>
+
+        <button id="runButton">
+            SLOW RUN
+        </button>
+
+        <button id="waveButton">
+            WAVE 👋
+        </button>
+
+        <button id="talkButton">
+            TALK
+        </button>
+
+        <button id="jumpButton">
+            JUMP
+        </button>
+
+        <button id="leftButton">
+            ↶ LEFT TURN
+        </button>
+
+        <button id="rightButton">
+            RIGHT TURN ↷
+        </button>
+
+    </div>
+
+
+    <!-- Loading message -->
+
+    <div id="loading">
+        Loading character...
+    </div>
+
+
+    <script
+        type="module"
+        src="./script.js"
+    ></script>
+
+</body>
+
+</html>
