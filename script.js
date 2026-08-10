@@ -270,18 +270,18 @@ function updatePushupAnimation(delta) {
         character.position.y = THREE.MathUtils.lerp(pushupState.standingY, 0.45, smoothP);
         character.position.z = THREE.MathUtils.lerp(0, 0.8, smoothP);
 
-        // Bend arms from T-pose to floor support posture relative to rest rotation
+        // Swing upper arms forward under chest and flex elbows for floor pushup stance
         if (leftArm && initialBoneRotations[leftArm.name]) {
-            leftArm.rotation.z = initialBoneRotations[leftArm.name].z - (1.1 * smoothP);
+            leftArm.rotation.x = initialBoneRotations[leftArm.name].x + (1.2 * smoothP);
         }
         if (rightArm && initialBoneRotations[rightArm.name]) {
-            rightArm.rotation.z = initialBoneRotations[rightArm.name].z + (1.1 * smoothP);
+            rightArm.rotation.x = initialBoneRotations[rightArm.name].x + (1.2 * smoothP);
         }
         if (leftForeArm && initialBoneRotations[leftForeArm.name]) {
-            leftForeArm.rotation.y = initialBoneRotations[leftForeArm.name].y + (1.2 * smoothP);
+            leftForeArm.rotation.z = initialBoneRotations[leftForeArm.name].z + (0.8 * smoothP);
         }
         if (rightForeArm && initialBoneRotations[rightForeArm.name]) {
-            rightForeArm.rotation.y = initialBoneRotations[rightForeArm.name].y - (1.2 * smoothP);
+            rightForeArm.rotation.z = initialBoneRotations[rightForeArm.name].z - (0.8 * smoothP);
         }
         if (head && initialBoneRotations[head.name]) {
             head.rotation.x = initialBoneRotations[head.name].x + (0.3 * smoothP);
@@ -306,16 +306,16 @@ function updatePushupAnimation(delta) {
 
         const elbowFlex = cycle * 0.5;
         if (leftForeArm && initialBoneRotations[leftForeArm.name]) {
-            leftForeArm.rotation.y = initialBoneRotations[leftForeArm.name].y + 1.2 - elbowFlex;
+            leftForeArm.rotation.z = initialBoneRotations[leftForeArm.name].z + 0.8 + elbowFlex;
         }
         if (rightForeArm && initialBoneRotations[rightForeArm.name]) {
-            rightForeArm.rotation.y = initialBoneRotations[rightForeArm.name].y - 1.2 + elbowFlex;
+            rightForeArm.rotation.z = initialBoneRotations[rightForeArm.name].z - 0.8 - elbowFlex;
         }
         if (leftArm && initialBoneRotations[leftArm.name]) {
-            leftArm.rotation.z = initialBoneRotations[leftArm.name].z - 1.1 + (cycle * 0.2);
+            leftArm.rotation.x = initialBoneRotations[leftArm.name].x + 1.2 - (cycle * 0.2);
         }
         if (rightArm && initialBoneRotations[rightArm.name]) {
-            rightArm.rotation.z = initialBoneRotations[rightArm.name].z + 1.1 - (cycle * 0.2);
+            rightArm.rotation.x = initialBoneRotations[rightArm.name].x + 1.2 - (cycle * 0.2);
         }
 
         if (t >= 1.0) {
@@ -352,16 +352,16 @@ function updatePushupAnimation(delta) {
         // Lerp bones back to initial rest pose
         const invP = 1.0 - smoothP;
         if (leftArm && initialBoneRotations[leftArm.name]) {
-            leftArm.rotation.z = initialBoneRotations[leftArm.name].z - (1.1 * invP);
+            leftArm.rotation.x = initialBoneRotations[leftArm.name].x + (1.2 * invP);
         }
         if (rightArm && initialBoneRotations[rightArm.name]) {
-            rightArm.rotation.z = initialBoneRotations[rightArm.name].z + (1.1 * invP);
+            rightArm.rotation.x = initialBoneRotations[rightArm.name].x + (1.2 * invP);
         }
         if (leftForeArm && initialBoneRotations[leftForeArm.name]) {
-            leftForeArm.rotation.y = initialBoneRotations[leftForeArm.name].y + (1.2 * invP);
+            leftForeArm.rotation.z = initialBoneRotations[leftForeArm.name].z + (0.8 * invP);
         }
         if (rightForeArm && initialBoneRotations[rightForeArm.name]) {
-            rightForeArm.rotation.y = initialBoneRotations[rightForeArm.name].y - (1.2 * invP);
+            rightForeArm.rotation.z = initialBoneRotations[rightForeArm.name].z - (0.8 * invP);
         }
         if (head && initialBoneRotations[head.name]) {
             head.rotation.x = initialBoneRotations[head.name].x + (0.3 * invP);
