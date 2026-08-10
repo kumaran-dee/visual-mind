@@ -93,6 +93,214 @@ let currentAction = null;
 let currentActionKey = "idle";
 const actions = {};
 
+// ======================================================
+// PUSHUP GESTURE STATE & VOICE PARSER
+// ======================================================
+
+const numberWords = {
+    "one": 1, "a": 1, "an": 1, "single": 1,
+    "two": 2, "double": 2,
+    "three": 3, "triple": 3,
+    "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+    "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+    "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20
+};
+
+function parsePushupCommand(text) {
+    const lower = text.toLowerCase();
+    const isPushup = lower.includes("pushup") || lower.includes("push up") || lower.includes("push-up");
+    if (!isPushup) return null;
+
+    // Check for digits e.g. "5", "10"
+    const digitMatch = lower.match(/\b(\d+)\b/);
+    if (digitMatch) {
+        const count = parseInt(digitMatch[1], 10);
+        return Math.min(Math.max(count, 1), 50);
+    }
+
+    // Check for number words e.g. "five", "three"
+    for (const [word, num] of Object.entries(numberWords)) {
+        const regex = new RegExp(`\\b${word}\\b`, 'i');
+        if (regex.test(lower)) {
+            return num;
+        }
+    }
+
+    // Default if no number specified
+    return 3;
+}
+
+function speakText(text) {
+    if ("speechSynthesis" in window) {
+        try {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.15;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        } catch (e) {
+            console.warn("Speech synthesis error:", e);
+        }
+    }
+}
+
+let pushupState = {
+    active: false,
+    phase: 'idle', // 'get_down', 'reps', 'get_up'
+    targetReps: 0,
+    currentRep: 0,
+    phaseTime: 0,
+    repTime: 0,
+    standingY: 0,
+    plankY: 0.35,
+    plankZ: 0.8
+};
+
+let characterBones = {};
+
+function cacheBones() {
+    characterBones = {};
+    if (!character) return;
+    character.traverse(child => {
+        if (child.isBone) {
+            characterBones[child.name] = child;
+        }
+    });
+}
+
+function getBone(name) {
+    if (characterBones[name]) return characterBones[name];
+    if (characterBones['mixamorig' + name]) return characterBones['mixamorig' + name];
+    for (let key in characterBones) {
+        if (key.toLowerCase().includes(name.toLowerCase())) {
+            return characterBones[key];
+        }
+    }
+    return null;
+}
+
+function startPushups(reps) {
+    if (!character) return;
+    cacheBones();
+
+    if (currentAction) {
+        currentAction.stop();
+    }
+    if (mixer) {
+        mixer.timeScale = 0;
+    }
+
+    character.rotation.set(0, 0, 0);
+
+    pushupState.active = true;
+    pushupState.phase = 'get_down';
+    pushupState.targetReps = reps || 3;
+    pushupState.currentRep = 1;
+    pushupState.phaseTime = 0;
+    pushupState.repTime = 0;
+
+    updateGestureUI("pushup", 1, pushupState.targetReps);
+    speakText(`Starting ${pushupState.targetReps} pushups!`);
+}
+
+function stopPushups() {
+    pushupState.active = false;
+    pushupState.phase = 'idle';
+    if (mixer) mixer.timeScale = 1;
+    if (character) {
+        character.rotation.set(0, 0, 0);
+        character.position.y = pushupState.standingY;
+        character.position.z = 0;
+    }
+}
+
+function updatePushupAnimation(delta) {
+    if (!pushupState.active || !character) return;
+
+    const leftArm = getBone("LeftArm");
+    const rightArm = getBone("RightArm");
+    const leftForeArm = getBone("LeftForeArm");
+    const rightForeArm = getBone("RightForeArm");
+    const head = getBone("Head");
+
+    if (pushupState.phase === 'get_down') {
+        pushupState.phaseTime += delta;
+        const duration = 0.8;
+        const p = Math.min(pushupState.phaseTime / duration, 1.0);
+        const smoothP = p * p * (3 - 2 * p);
+
+        character.rotation.x = THREE.MathUtils.lerp(0, -Math.PI / 2, smoothP);
+        character.position.y = THREE.MathUtils.lerp(pushupState.standingY, pushupState.plankY, smoothP);
+        character.position.z = THREE.MathUtils.lerp(0, pushupState.plankZ, smoothP);
+
+        if (leftArm) leftArm.rotation.x = THREE.MathUtils.lerp(0, 0.4, smoothP);
+        if (rightArm) rightArm.rotation.x = THREE.MathUtils.lerp(0, 0.4, smoothP);
+        if (leftForeArm) leftForeArm.rotation.z = THREE.MathUtils.lerp(0, -0.3, smoothP);
+        if (rightForeArm) rightForeArm.rotation.z = THREE.MathUtils.lerp(0, 0.3, smoothP);
+
+        if (p >= 1.0) {
+            pushupState.phase = 'reps';
+            pushupState.currentRep = 1;
+            pushupState.repTime = 0;
+        }
+    } else if (pushupState.phase === 'reps') {
+        pushupState.repTime += delta;
+        const repDuration = 1.3;
+        const t = pushupState.repTime / repDuration;
+
+        const cycle = Math.sin(t * Math.PI);
+        const dipDepth = 0.22;
+        character.position.y = pushupState.plankY - (dipDepth * cycle);
+
+        const elbowFlex = cycle * 0.95;
+        if (leftForeArm) leftForeArm.rotation.z = -0.3 - elbowFlex;
+        if (rightForeArm) rightForeArm.rotation.z = 0.3 + elbowFlex;
+        if (leftArm) leftArm.rotation.z = cycle * 0.25;
+        if (rightArm) rightArm.rotation.z = -cycle * 0.25;
+        if (leftArm) leftArm.rotation.x = 0.4 - cycle * 0.2;
+        if (rightArm) rightArm.rotation.x = 0.4 - cycle * 0.2;
+        if (head) head.rotation.x = cycle * 0.2;
+
+        if (t >= 1.0) {
+            speakText(pushupState.currentRep.toString());
+            pushupState.currentRep++;
+            pushupState.repTime = 0;
+
+            if (pushupState.currentRep > pushupState.targetReps) {
+                speakText("Done!");
+                pushupState.phase = 'get_up';
+                pushupState.phaseTime = 0;
+                const speechStatusEl = document.getElementById("speechStatus");
+                if (speechStatusEl) {
+                    speechStatusEl.textContent = `Completed ${pushupState.targetReps} pushups! 🎉`;
+                }
+            } else {
+                updateGestureUI("pushup", pushupState.currentRep, pushupState.targetReps);
+            }
+        }
+    } else if (pushupState.phase === 'get_up') {
+        pushupState.phaseTime += delta;
+        const duration = 0.8;
+        const p = Math.min(pushupState.phaseTime / duration, 1.0);
+        const smoothP = p * p * (3 - 2 * p);
+
+        character.rotation.x = THREE.MathUtils.lerp(-Math.PI / 2, 0, smoothP);
+        character.position.y = THREE.MathUtils.lerp(pushupState.plankY, pushupState.standingY, smoothP);
+        character.position.z = THREE.MathUtils.lerp(pushupState.plankZ, 0, smoothP);
+
+        if (leftArm) leftArm.rotation.x = THREE.MathUtils.lerp(0.4, 0, smoothP);
+        if (rightArm) rightArm.rotation.x = THREE.MathUtils.lerp(0.4, 0, smoothP);
+        if (leftForeArm) leftForeArm.rotation.z = THREE.MathUtils.lerp(-0.3, 0, smoothP);
+        if (rightForeArm) rightForeArm.rotation.z = THREE.MathUtils.lerp(0.3, 0, smoothP);
+
+        if (p >= 1.0) {
+            stopPushups();
+            playLoop("idle");
+            updateGestureUI("idle");
+        }
+    }
+}
+
 const modelFiles = {
     idle: { varName: "FBX_IDLE", file: "Idle.js" },
     walk: { varName: "FBX_WALKING", file: "Walking.js" },
@@ -168,6 +376,8 @@ parseOrLoadModel("idle", function (err, model) {
     // Feet on ground
     characterBox = new THREE.Box3().setFromObject(character);
     character.position.y -= characterBox.min.y;
+    pushupState.standingY = character.position.y;
+    cacheBones();
 
     // Shadows
     character.traverse(function (child) {
@@ -209,6 +419,7 @@ parseOrLoadModel("idle", function (err, model) {
 // ======================================================
 
 function playLoop(name) {
+    if (pushupState.active) return;
     const action = actions[name];
     if (!action) {
         console.log(name + " is still loading...");
@@ -222,6 +433,7 @@ function playLoop(name) {
 }
 
 function playOnce(name) {
+    if (pushupState.active) return;
     const action = actions[name];
     if (!action) {
         console.log(name + " is still loading...");
@@ -265,6 +477,7 @@ function switchAnimation(newAction) {
 // ======================================================
 
 const commandConfig = [
+    { key: "pushup", type: "custom", label: "PUSHUPS 🏋️‍♂️", keywords: ["pushup", "pushups", "push up", "push ups"] },
     { key: "wave", type: "once", label: "WAVE 👋", keywords: ["wave", "waving", "hi", "hello", "say hi", "bye"] },
     { key: "jump", type: "once", label: "JUMP 🦘", keywords: ["jump", "jumping", "hop", "leap"] },
     { key: "walk", type: "loop", label: "WALK 🚶", keywords: ["walk", "walking", "step", "move", "go"] },
@@ -275,9 +488,14 @@ const commandConfig = [
     { key: "idle", type: "loop", label: "IDLE 🧍", keywords: ["idle", "stop", "stand", "rest", "halt", "stay"] }
 ];
 
-function updateGestureUI(key) {
-    const config = commandConfig.find(c => c.key === key);
-    const label = config ? config.label : key.toUpperCase();
+function updateGestureUI(key, currentRep, totalReps) {
+    let label = "";
+    if (key === "pushup") {
+        label = `PUSHUPS (${currentRep || 1}/${totalReps || 5}) 🏋️‍♂️`;
+    } else {
+        const config = commandConfig.find(c => c.key === key);
+        label = config ? config.label : key.toUpperCase();
+    }
 
     const currentGestureEl = document.getElementById("currentGestureName");
     if (currentGestureEl) currentGestureEl.textContent = label;
@@ -289,6 +507,14 @@ function updateGestureUI(key) {
 }
 
 function triggerGestureByKey(key) {
+    if (key === "pushup") {
+        startPushups(5);
+        return;
+    }
+    if (pushupState.active) {
+        stopPushups();
+    }
+
     const config = commandConfig.find(c => c.key === key);
     if (!config) return;
 
@@ -336,7 +562,7 @@ if (SpeechRecognition) {
         isListening = true;
         voiceContainer.classList.add("is-listening");
         speechStatus.textContent = "Listening... Speak a command";
-        speechTranscript.textContent = 'Try saying "Wave", "Jump", "Walk", "Run"...';
+        speechTranscript.textContent = 'Try saying "Do 5 Pushups", "Wave", "Jump", "Walk"...';
     };
 
     recognition.onresult = function (event) {
@@ -359,6 +585,15 @@ if (SpeechRecognition) {
             // Check matching command
             const now = Date.now();
             if (now - lastTriggerTime > 1200) { // Cooldown to avoid multi-triggers
+                // Check pushup with count first
+                const pushupCount = parsePushupCommand(currentText);
+                if (pushupCount !== null) {
+                    lastTriggerTime = now;
+                    startPushups(pushupCount);
+                    speechStatus.textContent = `Activated: PUSHUPS (${pushupCount} reps) 🏋️‍♂️`;
+                    return;
+                }
+
                 for (const cmd of commandConfig) {
                     for (const kw of cmd.keywords) {
                         if (currentText.includes(kw)) {
@@ -386,7 +621,6 @@ if (SpeechRecognition) {
 
     recognition.onend = function () {
         if (isListening) {
-            // Auto restart recognition for continuous voice control
             try {
                 recognition.start();
             } catch (e) {
@@ -414,7 +648,7 @@ function stopListening() {
     isListening = false;
     voiceContainer.classList.remove("is-listening");
     speechStatus.textContent = "Click Microphone to start voice commands";
-    speechTranscript.textContent = 'Say: "Walk", "Run", "Wave", "Jump", "Talk", "Left", "Right", "Idle"';
+    speechTranscript.textContent = 'Say: "Do 5 Pushups", "Walk", "Run", "Wave", "Jump", "Talk", "Idle"';
     if (recognition) {
         try {
             recognition.stop();
@@ -439,7 +673,13 @@ const clock = new THREE.Clock();
 function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
-    if (mixer) mixer.update(delta);
+
+    if (pushupState.active) {
+        updatePushupAnimation(delta);
+    } else {
+        if (mixer) mixer.update(delta);
+    }
+
     controls.update();
     renderer.render(scene, camera);
 }
