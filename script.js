@@ -170,9 +170,11 @@ let characterBones = {};
 let initialBoneRotations = {};
 
 function cacheBones() {
+    if (!character) return;
+    if (Object.keys(initialBoneRotations).length > 0) return; // Cache once on pristine rest pose
+
     characterBones = {};
     initialBoneRotations = {};
-    if (!character) return;
     character.traverse(child => {
         if (child.isBone) {
             characterBones[child.name] = child;
@@ -214,7 +216,11 @@ function startPushups(reps) {
     }
     currentAction = null;
 
+    // Reset root position and bone rotations to pristine standing pose
     character.rotation.set(0, 0, 0);
+    character.position.y = pushupState.standingY;
+    character.position.z = 0;
+    resetBonesToInitial();
 
     pushupState.active = true;
     pushupState.phase = 'get_down';
@@ -242,7 +248,7 @@ function stopPushups() {
         character.position.z = 0;
         resetBonesToInitial();
     }
-    
+
     playLoop("idle");
     updateGestureUI("idle");
 }
