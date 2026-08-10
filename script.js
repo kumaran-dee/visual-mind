@@ -97,7 +97,7 @@ const actions = {};
 // PUSHUP GESTURE STATE & VOICE PARSER
 // ======================================================
 
-const MAX_PUSHUP_LIMIT = 10;
+const MAX_PUSHUP_LIMIT = 50;
 
 const numberWords = {
     "one": 1, "a": 1, "an": 1, "single": 1,
@@ -105,7 +105,8 @@ const numberWords = {
     "three": 3, "triple": 3,
     "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
     "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
-    "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20
+    "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20,
+    "thirty": 30, "forty": 40, "fifty": 50
 };
 
 function parsePushupCommand(text) {
@@ -161,7 +162,7 @@ let pushupState = {
     phaseTime: 0,
     repTime: 0,
     standingY: 0,
-    plankY: 0.42,
+    plankY: 0.38,
     plankZ: 0.3
 };
 
@@ -243,19 +244,18 @@ function updatePushupAnimation(delta) {
         const smoothP = p * p * (3 - 2 * p);
 
         // Turn character face DOWN (prone position for pushups)
-        character.rotation.x = THREE.MathUtils.lerp(0, Math.PI / 2, smoothP);
-        character.rotation.y = THREE.MathUtils.lerp(0, Math.PI, smoothP);
+        character.rotation.x = THREE.MathUtils.lerp(0, -Math.PI / 2, smoothP);
+        character.rotation.y = 0;
+        character.rotation.z = 0;
         character.position.y = THREE.MathUtils.lerp(pushupState.standingY, pushupState.plankY, smoothP);
         character.position.z = THREE.MathUtils.lerp(0, pushupState.plankZ, smoothP);
 
-        // Position arms into proper floor pushup plank posture
-        if (leftArm) leftArm.rotation.x = THREE.MathUtils.lerp(0, -1.2, smoothP);
-        if (rightArm) rightArm.rotation.x = THREE.MathUtils.lerp(0, -1.2, smoothP);
-        if (leftArm) leftArm.rotation.z = THREE.MathUtils.lerp(0, 0.3, smoothP);
-        if (rightArm) rightArm.rotation.z = THREE.MathUtils.lerp(0, -0.3, smoothP);
-        if (leftForeArm) leftForeArm.rotation.z = THREE.MathUtils.lerp(0, 0.6, smoothP);
-        if (rightForeArm) rightForeArm.rotation.z = THREE.MathUtils.lerp(0, -0.6, smoothP);
-        if (head) head.rotation.x = THREE.MathUtils.lerp(0, -0.35, smoothP);
+        // Position arms flat under shoulders in proper floor plank posture
+        if (leftArm) leftArm.rotation.z = THREE.MathUtils.lerp(0, -0.5, smoothP);
+        if (rightArm) rightArm.rotation.z = THREE.MathUtils.lerp(0, 0.5, smoothP);
+        if (leftForeArm) leftForeArm.rotation.y = THREE.MathUtils.lerp(0, 1.2, smoothP);
+        if (rightForeArm) rightForeArm.rotation.y = THREE.MathUtils.lerp(0, -1.2, smoothP);
+        if (head) head.rotation.x = THREE.MathUtils.lerp(0, 0.3, smoothP);
 
         if (p >= 1.0) {
             pushupState.phase = 'reps';
@@ -268,15 +268,15 @@ function updatePushupAnimation(delta) {
         const t = pushupState.repTime / repDuration;
 
         const cycle = Math.sin(t * Math.PI);
-        const dipDepth = 0.25;
+        const dipDepth = 0.22;
         character.position.y = pushupState.plankY - (dipDepth * cycle);
 
-        const elbowFlex = cycle * 0.9;
-        if (leftForeArm) leftForeArm.rotation.z = 0.6 + elbowFlex;
-        if (rightForeArm) rightForeArm.rotation.z = -0.6 - elbowFlex;
-        if (leftArm) leftArm.rotation.z = 0.3 + (cycle * 0.2);
-        if (rightArm) rightArm.rotation.z = -0.3 - (cycle * 0.2);
-        if (head) head.rotation.x = -0.35 + (cycle * 0.2);
+        const elbowFlex = cycle * 0.4;
+        if (leftForeArm) leftForeArm.rotation.y = 1.2 - elbowFlex;
+        if (rightForeArm) rightForeArm.rotation.y = -1.2 + elbowFlex;
+        if (leftArm) leftArm.rotation.z = -0.5 - (cycle * 0.25);
+        if (rightArm) rightArm.rotation.z = 0.5 + (cycle * 0.25);
+        if (head) head.rotation.x = 0.3 - (cycle * 0.15);
 
         if (t >= 1.0) {
             speakText(pushupState.currentRep.toString());
@@ -301,18 +301,17 @@ function updatePushupAnimation(delta) {
         const p = Math.min(pushupState.phaseTime / duration, 1.0);
         const smoothP = p * p * (3 - 2 * p);
 
-        character.rotation.x = THREE.MathUtils.lerp(Math.PI / 2, 0, smoothP);
-        character.rotation.y = THREE.MathUtils.lerp(Math.PI, 0, smoothP);
+        character.rotation.x = THREE.MathUtils.lerp(-Math.PI / 2, 0, smoothP);
+        character.rotation.y = 0;
+        character.rotation.z = 0;
         character.position.y = THREE.MathUtils.lerp(pushupState.plankY, pushupState.standingY, smoothP);
         character.position.z = THREE.MathUtils.lerp(pushupState.plankZ, 0, smoothP);
 
-        if (leftArm) leftArm.rotation.x = THREE.MathUtils.lerp(-1.2, 0, smoothP);
-        if (rightArm) rightArm.rotation.x = THREE.MathUtils.lerp(-1.2, 0, smoothP);
-        if (leftArm) leftArm.rotation.z = THREE.MathUtils.lerp(0.3, 0, smoothP);
-        if (rightArm) rightArm.rotation.z = THREE.MathUtils.lerp(-0.3, 0, smoothP);
-        if (leftForeArm) leftForeArm.rotation.z = THREE.MathUtils.lerp(0.6, 0, smoothP);
-        if (rightForeArm) rightForeArm.rotation.z = THREE.MathUtils.lerp(-0.6, 0, smoothP);
-        if (head) head.rotation.x = THREE.MathUtils.lerp(-0.35, 0, smoothP);
+        if (leftArm) leftArm.rotation.z = THREE.MathUtils.lerp(-0.5, 0, smoothP);
+        if (rightArm) rightArm.rotation.z = THREE.MathUtils.lerp(0.5, 0, smoothP);
+        if (leftForeArm) leftForeArm.rotation.y = THREE.MathUtils.lerp(1.2, 0, smoothP);
+        if (rightForeArm) rightForeArm.rotation.y = THREE.MathUtils.lerp(-1.2, 0, smoothP);
+        if (head) head.rotation.x = THREE.MathUtils.lerp(0.3, 0, smoothP);
 
         if (p >= 1.0) {
             stopPushups();
