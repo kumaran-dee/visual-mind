@@ -167,15 +167,26 @@ let pushupState = {
 };
 
 let characterBones = {};
+let initialBoneRotations = {};
 
 function cacheBones() {
     characterBones = {};
+    initialBoneRotations = {};
     if (!character) return;
     character.traverse(child => {
         if (child.isBone) {
             characterBones[child.name] = child;
+            initialBoneRotations[child.name] = child.rotation.clone();
         }
     });
+}
+
+function resetBonesToInitial() {
+    for (let name in characterBones) {
+        if (initialBoneRotations[name]) {
+            characterBones[name].rotation.copy(initialBoneRotations[name]);
+        }
+    }
 }
 
 function getBone(name) {
@@ -197,12 +208,11 @@ function startPushups(reps) {
         reps = MAX_PUSHUP_LIMIT;
     }
 
-    if (currentAction) {
-        currentAction.stop();
-    }
     if (mixer) {
+        mixer.stopAllAction();
         mixer.timeScale = 0;
     }
+    currentAction = null;
 
     character.rotation.set(0, 0, 0);
 
@@ -220,16 +230,31 @@ function startPushups(reps) {
 function stopPushups() {
     pushupState.active = false;
     pushupState.phase = 'idle';
-    if (mixer) mixer.timeScale = 1;
+    if (mixer) {
+        mixer.timeScale = 1;
+        mixer.stopAllAction();
+    }
+    currentAction = null;
+
     if (character) {
         character.rotation.set(0, 0, 0);
         character.position.y = pushupState.standingY;
         character.position.z = 0;
+        resetBonesToInitial();
     }
+    
+    playLoop("idle");
+    updateGestureUI("idle");
 }
 
 function updatePushupAnimation(delta) {
     if (!pushupState.active || !character) return;
+
+    const leftArm = getBone("LeftArm");
+    const rightArm = getBone("RightArm");
+    const leftForeArm = getBone("LeftForeArm");
+    const rightForeArm = getBone("RightForeArm");
+    const head = getBone("Head");
 
     if (pushupState.phase === 'get_down') {
         pushupState.phaseTime += delta;
@@ -245,6 +270,23 @@ function updatePushupAnimation(delta) {
         character.position.y = THREE.MathUtils.lerp(pushupState.standingY, 0.45, smoothP);
         character.position.z = THREE.MathUtils.lerp(0, 0.8, smoothP);
 
+        // Bend arms from T-pose to floor support posture relative to rest rotation
+        if (leftArm && initialBoneRotations[leftArm.name]) {
+            leftArm.rotation.z = initialBoneRotations[leftArm.name].z - (1.1 * smoothP);
+        }
+        if (rightArm && initialBoneRotations[rightArm.name]) {
+            rightArm.rotation.z = initialBoneRotations[rightArm.name].z + (1.1 * smoothP);
+        }
+        if (leftForeArm && initialBoneRotations[leftForeArm.name]) {
+            leftForeArm.rotation.y = initialBoneRotations[leftForeArm.name].y + (1.2 * smoothP);
+        }
+        if (rightForeArm && initialBoneRotations[rightForeArm.name]) {
+            rightForeArm.rotation.y = initialBoneRotations[rightForeArm.name].y - (1.2 * smoothP);
+        }
+        if (head && initialBoneRotations[head.name]) {
+            head.rotation.x = initialBoneRotations[head.name].x + (0.3 * smoothP);
+        }
+
         if (p >= 1.0) {
             pushupState.phase = 'reps';
             pushupState.currentRep = 1;
@@ -257,10 +299,24 @@ function updatePushupAnimation(delta) {
 
         // Down and up pushup motion
         const cycle = Math.sin(t * Math.PI);
-        const dipDepth = 0.28;
+        const dipDepth = 0.25;
 
         character.position.y = 0.45 - (dipDepth * cycle);
         character.rotation.x = -Math.PI / 2 - (cycle * 0.08);
+
+        const elbowFlex = cycle * 0.5;
+        if (leftForeArm && initialBoneRotations[leftForeArm.name]) {
+            leftForeArm.rotation.y = initialBoneRotations[leftForeArm.name].y + 1.2 - elbowFlex;
+        }
+        if (rightForeArm && initialBoneRotations[rightForeArm.name]) {
+            rightForeArm.rotation.y = initialBoneRotations[rightForeArm.name].y - 1.2 + elbowFlex;
+        }
+        if (leftArm && initialBoneRotations[leftArm.name]) {
+            leftArm.rotation.z = initialBoneRotations[leftArm.name].z - 1.1 + (cycle * 0.2);
+        }
+        if (rightArm && initialBoneRotations[rightArm.name]) {
+            rightArm.rotation.z = initialBoneRotations[rightArm.name].z + 1.1 - (cycle * 0.2);
+        }
 
         if (t >= 1.0) {
             speakText(pushupState.currentRep.toString());
@@ -293,10 +349,26 @@ function updatePushupAnimation(delta) {
         character.position.y = THREE.MathUtils.lerp(0.45, pushupState.standingY, smoothP);
         character.position.z = THREE.MathUtils.lerp(0.8, 0, smoothP);
 
+        // Lerp bones back to initial rest pose
+        const invP = 1.0 - smoothP;
+        if (leftArm && initialBoneRotations[leftArm.name]) {
+            leftArm.rotation.z = initialBoneRotations[leftArm.name].z - (1.1 * invP);
+        }
+        if (rightArm && initialBoneRotations[rightArm.name]) {
+            rightArm.rotation.z = initialBoneRotations[rightArm.name].z + (1.1 * invP);
+        }
+        if (leftForeArm && initialBoneRotations[leftForeArm.name]) {
+            leftForeArm.rotation.y = initialBoneRotations[leftForeArm.name].y + (1.2 * invP);
+        }
+        if (rightForeArm && initialBoneRotations[rightForeArm.name]) {
+            rightForeArm.rotation.y = initialBoneRotations[rightForeArm.name].y - (1.2 * invP);
+        }
+        if (head && initialBoneRotations[head.name]) {
+            head.rotation.x = initialBoneRotations[head.name].x + (0.3 * invP);
+        }
+
         if (p >= 1.0) {
             stopPushups();
-            playLoop("idle");
-            updateGestureUI("idle");
         }
     }
 }
